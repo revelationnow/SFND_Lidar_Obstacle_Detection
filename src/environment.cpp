@@ -59,6 +59,16 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     renderPointCloud(viewer,segmentCloud.first,"obstCloud",Color(1,0,0));
     renderPointCloud(viewer,segmentCloud.second,"planeCloud",Color(0,1,0));
 
+    auto clusters = pointProcessor->Clustering(segmentCloud.first, 1.0, 3, 30);
+
+    int cluster_id = 0;
+    for(auto cluster : clusters)
+    {
+      Box box = pointProcessor->BoundingBox(cluster);
+      renderBox(viewer,box,cluster_id);
+      cluster_id++;
+    }
+
 }
 
 

@@ -4,6 +4,7 @@
 #include "../../render/render.h"
 #include "../../render/box.h"
 #include <chrono>
+#include <queue>
 #include <string>
 #include "kdtree.h"
 
@@ -75,13 +76,73 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 
 }
 
+
+
 std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
 {
 
 	// TODO: Fill out this function to return list of indices for each cluster
 
 	std::vector<std::vector<int>> clusters;
- 
+  std::vector<int> curr_cluster;
+  std::vector<bool> processed;
+  std::vector<bool> point_in_queue;
+  std::queue<int> points_to_process;
+  int cluster_id = 0;
+  for(size_t i = 0; i < points.size(); i++)
+  {
+    processed.push_back(false);
+    point_in_queue.push_back(false);
+  }
+
+  points_to_process.push(0);
+  point_in_queue[0] = true;
+
+  while(!points_to_process.empty())
+  {
+    int curr_point = points_to_process.front();
+    points_to_process.pop();
+    point_in_queue[curr_point] = false;
+    processed[curr_point] = true;
+    curr_cluster.push_back(curr_point);
+    std::cerr<<"Processing : "<<curr_point<<std::endl;
+
+    auto neighbours = tree->search(points[curr_point], distanceTol);
+    std::cerr<<"Neighbours of "<<curr_point<<" : ";
+    for(auto it:neighbours)
+    {
+      if((false == processed[it]) && (false == point_in_queue[it]))
+      {
+        points_to_process.push(it);
+        point_in_queue[it] = true;
+        std::cerr<<it<<", ";
+      }
+    }
+    std::cerr<<std::endl;
+
+    if(points_to_process.empty())
+    {
+      std::cerr<<"Points in cluster "<<cluster_id<<" : ";
+      for(auto it:curr_cluster)
+      {
+        std::cerr<<it<<", ";
+      }
+      std::cerr<<std::endl;
+      clusters.push_back(curr_cluster);
+      curr_cluster.clear();
+      for(size_t i = 0; i < processed.size(); i++)
+      {
+        if(processed[i] == false)
+        {
+          points_to_process.push(i);
+          break;
+        }
+      }
+      cluster_id++;
+      std::cerr<<"New Cluster "<<cluster_id<<std::endl;
+    }
+  }
+
 	return clusters;
 
 }

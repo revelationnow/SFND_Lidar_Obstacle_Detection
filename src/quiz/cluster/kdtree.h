@@ -55,10 +55,44 @@ struct KdTree
 
 	}
 
+  void search_helper(std::vector<float> target, float distanceTol, Node *curr_root, std::vector<int> &ids, int depth = 0)
+  {
+
+    if(NULL == curr_root)
+      return;
+
+    float root_dim = curr_root->point[depth % curr_root->point.size()];
+    float target_dim = target[depth % curr_root->point.size()];
+
+    bool check_left  = (target_dim <= root_dim) || ((target_dim - distanceTol) <= root_dim);
+    bool check_right = (target_dim > root_dim) || ((target_dim + distanceTol) > root_dim);
+    if(check_left)
+    {
+      search_helper(target, distanceTol, curr_root->left, ids, depth + 1);
+    }
+
+    if(check_right)
+    {
+      search_helper(target, distanceTol, curr_root->right, ids, depth + 1);
+    }
+
+    float sq_dist_root_targ = 0.0;
+    for(size_t i = 0;i < target.size(); i++)
+    {
+      sq_dist_root_targ += (target[i] - curr_root->point[i]) * (target[i] - curr_root->point[i]);
+    }
+
+    if(sq_dist_root_targ <= (distanceTol * distanceTol))
+    {
+      ids.push_back(curr_root->id);
+    }
+  }
+
 	// return a list of point ids in the tree that are within distance of target
 	std::vector<int> search(std::vector<float> target, float distanceTol)
 	{
 		std::vector<int> ids;
+    search_helper(target, distanceTol, root, ids);
 		return ids;
 	}
 	
