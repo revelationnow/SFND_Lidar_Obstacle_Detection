@@ -6,6 +6,22 @@
 #include "../../processPointClouds.h"
 // using templates for processPointClouds so also include .cpp to help linker
 #include "../../processPointClouds.cpp"
+#include <random>
+#include  <iterator>
+
+template<typename Iter, typename RandomGenerator>
+Iter select_randomly(Iter start, Iter end, RandomGenerator& g) {
+    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+    std::advance(start, dis(g));
+    return start;
+}
+
+template<typename Iter>
+Iter select_randomly(Iter start, Iter end) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    return select_randomly(start, end, gen);
+}
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData()
 {
@@ -65,18 +81,45 @@ std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int ma
 {
 	std::unordered_set<int> inliersResult;
 	srand(time(NULL));
-	
+
 	// TODO: Fill in this function
+	// For max iterations
+  for(size_t i = 0; i < maxIterations; i++)
+  {
+    std::unordered_set<int> inliersResultTemp;
 
-	// For max iterations 
+    pcl::PointXYZ p1 = *select_randomly(cloud->begin(), cloud->end());
+    pcl::PointXYZ p2 = *select_randomly(cloud->begin(), cloud->end());
+    pcl::PointXYZ p3 = *select_randomly(cloud->begin(), cloud->end());
 
-	// Randomly sample subset and fit line
+    int A = ((p1.y - p2.y) * (p3.z - p1.z)) - ((p2.z - p1.z) * (p3.y - p1.y));
+    int B = ((p2.z - p1.z) * (p3.x - p1.x)) - ((p2.x - p1.x) * (p3.z - p1.z));
+    int C = ((p2.x - p1.x) * (p3.y - p1.y)) - ((p2.y - p1.y) * (p3.x - p1.y));
+    int D = -1 * (A * p1.x + B * p1.y + C * p1.z);
+
+    for(size_t point_ind = 0; point_ind < cloud->size(); point_ind++)
+    {
+      double dist = fabs((A * cloud->at(point_ind).x) + (B * cloud->at(point_ind).y) + C * cloud->at(point_ind).z + D)/sqrt(A*A +B*B + C*C);
+
+      if(dist <= distanceTol)
+      {
+        inliersResultTemp.insert(point_ind);
+      }
+    }
+    if(inliersResultTemp.size() > inliersResult.size())
+    {
+      inliersResult = inliersResultTemp;
+    }
+
+  	// Randomly sample subset and fit line
+
 
 	// Measure distance between every point and fitted line
 	// If distance is smaller than threshold count it as inlier
 
+  }
 	// Return indicies of inliers from fitted line with most inliers
-	
+
 	return inliersResult;
 
 }
@@ -89,10 +132,10 @@ int main ()
 
 	// Create data
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData();
-	
+
 
 	// TODO: Change the max iteration and distance tolerance arguments for Ransac function
-	std::unordered_set<int> inliers = Ransac(cloud, 0, 0);
+	std::unordered_set<int> inliers = Ransac(cloud, 10, 1.0);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr  cloudInliers(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOutliers(new pcl::PointCloud<pcl::PointXYZ>());
@@ -117,10 +160,10 @@ int main ()
   	{
   		renderPointCloud(viewer,cloud,"data");
   	}
-	
+
   	while (!viewer->wasStopped ())
   	{
   	  viewer->spinOnce ();
   	}
-  	
+
 }
