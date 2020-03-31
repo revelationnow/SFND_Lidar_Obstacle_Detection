@@ -2,67 +2,73 @@
 // Quiz on implementing kd tree
 
 #include "../../render/render.h"
+#include <memory>
 
 
 // Structure to represent node of kd tree
+template<typename PointT>
 struct Node
 {
-	std::vector<float> point;
+	PointT point;
 	int id;
-	Node* left;
-	Node* right;
+  std::unique_ptr<Node<PointT>> left;
+  std::unique_ptr<Node<PointT>> right;
 
-	Node(std::vector<float> arr, int setId)
-	:	point(arr), id(setId), left(NULL), right(NULL)
+	Node(PointT arr, int setId)
+	:	point(arr), id(setId), left(nullptr), right(nullptr)
 	{}
+
 };
 
+template<typename PointT>
 struct KdTree
 {
-	Node* root;
+  std::unique_ptr<Node<PointT>> root;
+  int _dimension;
 
 	KdTree()
-	: root(NULL)
+	: root(NULL), _dimension(3)
 	{}
 
-  void insert_helper(std::vector<float> &point, int id, Node** curr_root, int depth = 0)
+	KdTree(int dim)
+	: root(nullptr), _dimension(dim)
+	{}
+
+  void insert_helper(PointT &point, int id, std::unique_ptr<Node<PointT>> &curr_root, int depth = 0)
   {
-    if(*curr_root == NULL)
+    if(curr_root == nullptr)
     {
-      std::cout<<"Found"<<std::endl;
-      *curr_root = new Node(point, id);
+      curr_root.reset(std::move(new Node<PointT>(point, id)));
     }
     else
     {
-      if(point[depth % point.size()] < (*curr_root)->point[depth % point.size()])
+      if(point.data[depth % _dimension] < curr_root->point.data[depth % _dimension])
       {
-        std::cout<<"Going left"<<std::endl;
-        insert_helper(point, id, &((*curr_root)->left), depth + 1);
+        insert_helper(point, id, curr_root->left, depth + 1);
       }
       else
       {
-        std::cout<<"Going Right"<<std::endl;
-        insert_helper(point, id, &((*curr_root)->right), depth + 1);
+        insert_helper(point, id, curr_root->right, depth + 1);
       }
     }
   }
 
-	void insert(std::vector<float> point, int id)
+	void insert(PointT point, int id)
 	{
 		// TODO: Fill in this function to insert a new point into the tree
 		// the function should create a new node and place correctly with in the root 
-    insert_helper(point, id, &root);
+    insert_helper(point, id, root);
 
 	}
 
-  void search_helper(std::vector<float> target, float distanceTol, Node *curr_root, std::vector<int> &ids, int depth = 0)
+  void search_helper(PointT &target, float distanceTol, std::unique_ptr<Node<PointT>> &curr_root, std::vector<int> &ids, int depth = 0)
   {
 
     if(NULL == curr_root)
       return;
 
-    float root_dim = curr_root->point[depth % curr_root->point.size()];
-    float target_dim = target[depth % curr_root->point.size()];
+    float root_dim = curr_root->point.data[depth % _dimension];
+    float target_dim = target.data[depth % _dimension];
 
     bool check_left  = (target_dim <= root_dim) || ((target_dim - distanceTol) <= root_dim);
     bool check_right = (target_dim > root_dim) || ((target_dim + distanceTol) > root_dim);
@@ -77,9 +83,9 @@ struct KdTree
     }
 
     float sq_dist_root_targ = 0.0;
-    for(size_t i = 0;i < target.size(); i++)
+    for(size_t i = 0;i < _dimension; i++)
     {
-      sq_dist_root_targ += (target[i] - curr_root->point[i]) * (target[i] - curr_root->point[i]);
+      sq_dist_root_targ += (target.data[i] - curr_root->point.data[i]) * (target.data[i] - curr_root->point.data[i]);
     }
 
     if(sq_dist_root_targ <= (distanceTol * distanceTol))
@@ -89,13 +95,12 @@ struct KdTree
   }
 
 	// return a list of point ids in the tree that are within distance of target
-	std::vector<int> search(std::vector<float> target, float distanceTol)
+	std::vector<int> search(PointT target, float distanceTol)
 	{
 		std::vector<int> ids;
     search_helper(target, distanceTol, root, ids);
 		return ids;
 	}
-	
 
 };
 
