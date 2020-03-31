@@ -8,6 +8,16 @@
 #include <string>
 #include "kdtree.h"
 
+#define CLUSTER_POINT_DIM 2
+  struct ClusterPoints{
+    float data[CLUSTER_POINT_DIM];
+
+    ClusterPoints(float a, float b)
+    {
+      data[0] = a;
+      data[1] = b;
+    }
+  };
 // Arguments:
 // window is the region to draw box around
 // increase zoom to see more of the area
@@ -23,15 +33,15 @@ pcl::visualization::PCLVisualizer::Ptr initScene(Box window, int zoom)
     return viewer;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> points)
+pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<ClusterPoints> points)
 {
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
     for(int i = 0; i < points.size(); i++)
     {
       pcl::PointXYZ point;
-      point.x = points[i][0];
-      point.y = points[i][1];
+      point.x = points[i].data[0];
+      point.y = points[i].data[1];
       point.z = 0;
 
       cloud->points.push_back(point);
@@ -45,7 +55,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> p
 }
 
 
-void render2DTree(std::unique_ptr<Node<std::vector<float>>> &node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration, uint depth=0)
+void render2DTree(std::unique_ptr<Node<ClusterPoints>> &node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration, uint depth=0)
 {
 
   if(node!=NULL)
@@ -55,16 +65,16 @@ void render2DTree(std::unique_ptr<Node<std::vector<float>>> &node, pcl::visualiz
     // split on x axis
     if(depth%2==0)
     {
-      viewer->addLine(pcl::PointXYZ(node->point[0], window.y_min, 0),pcl::PointXYZ(node->point[0], window.y_max, 0),0,0,1,"line"+std::to_string(iteration));
-      lowerWindow.x_max = node->point[0];
-      upperWindow.x_min = node->point[0];
+      viewer->addLine(pcl::PointXYZ(node->point.data[0], window.y_min, 0),pcl::PointXYZ(node->point.data[0], window.y_max, 0),0,0,1,"line"+std::to_string(iteration));
+      lowerWindow.x_max = node->point.data[0];
+      upperWindow.x_min = node->point.data[0];
     }
     // split on y axis
     else
     {
-      viewer->addLine(pcl::PointXYZ(window.x_min, node->point[1], 0),pcl::PointXYZ(window.x_max, node->point[1], 0),1,0,0,"line"+std::to_string(iteration));
-      lowerWindow.y_max = node->point[1];
-      upperWindow.y_min = node->point[1];
+      viewer->addLine(pcl::PointXYZ(window.x_min, node->point.data[1], 0),pcl::PointXYZ(window.x_max, node->point.data[1], 0),1,0,0,"line"+std::to_string(iteration));
+      lowerWindow.y_max = node->point.data[1];
+      upperWindow.y_min = node->point.data[1];
     }
     iteration++;
 
@@ -78,7 +88,7 @@ void render2DTree(std::unique_ptr<Node<std::vector<float>>> &node, pcl::visualiz
 
 
 
-std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree<std::vector<float>>* tree, float distanceTol)
+std::vector<std::vector<int>> euclideanCluster(const std::vector<ClusterPoints>& points, KdTree<ClusterPoints>* tree, float distanceTol)
 {
 
   // TODO: Fill out this function to return list of indices for each cluster
@@ -160,12 +170,14 @@ int main ()
   window.z_max =   0;
   pcl::visualization::PCLVisualizer::Ptr viewer = initScene(window, 25);
 
+
+
   // Create data
-  std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3}, {7.2,6.1}, {8.0,5.3}, {7.2,7.1}, {0.2,-7.1}, {1.7,-6.9}, {-1.2,-7.2}, {2.2,-8.9} };
+  std::vector<ClusterPoints> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3}, {7.2,6.1}, {8.0,5.3}, {7.2,7.1}, {0.2,-7.1}, {1.7,-6.9}, {-1.2,-7.2}, {2.2,-8.9} };
   //std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3} };
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData(points);
 
-  KdTree<std::vector<float>>* tree = new KdTree<std::vector<float>>(2);
+  KdTree<ClusterPoints>* tree = new KdTree<ClusterPoints>(CLUSTER_POINT_DIM);
 
   for (int i=0; i<points.size(); i++)
     tree->insert(points[i],i);
@@ -195,7 +207,7 @@ int main ()
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZ>());
     for(int indice: cluster)
-      clusterCloud->points.push_back(pcl::PointXYZ(points[indice][0],points[indice][1],0));
+      clusterCloud->points.push_back(pcl::PointXYZ(points[indice].data[0],points[indice].data[1],0));
     renderPointCloud(viewer, clusterCloud,"cluster"+std::to_string(clusterId),colors[clusterId%3]);
     ++clusterId;
   }

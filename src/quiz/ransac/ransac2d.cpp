@@ -9,19 +9,6 @@
 #include <random>
 #include  <iterator>
 
-template<typename Iter, typename RandomGenerator>
-Iter select_randomly(Iter start, Iter end, RandomGenerator& g) {
-    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
-    std::advance(start, dis(g));
-    return start;
-}
-
-template<typename Iter>
-Iter select_randomly(Iter start, Iter end) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    return select_randomly(start, end, gen);
-}
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData()
 {
@@ -78,6 +65,51 @@ pcl::visualization::PCLVisualizer::Ptr initScene()
 }
 
 std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+{
+  std::unordered_set<int> inliersResult;
+  srand(time(NULL));
+
+  // TODO: Fill in this function
+  // For max iterations
+  for(size_t i = 0; i < maxIterations; i++)
+  {
+    std::unordered_set<int> inliersResultTemp;
+
+    pcl::PointXYZ p1 = *select_randomly(cloud->begin(), cloud->end());
+    pcl::PointXYZ p2 = *select_randomly(cloud->begin(), cloud->end());
+    pcl::PointXYZ p3 = *select_randomly(cloud->begin(), cloud->end());
+
+    int A = (p1.y - p2.y);
+    int B = (p2.x - p1.x);
+    int C = (p1.x * p2.y) - (p2.x * p1.y);
+
+    for(size_t point_ind = 0; point_ind < cloud->size(); point_ind++)
+    {
+      double dist = fabs((A * cloud->at(point_ind).x) + (B * cloud->at(point_ind).y) + C )/sqrt(A*A +B*B);
+
+      if(dist <= distanceTol)
+      {
+        inliersResultTemp.insert(point_ind);
+      }
+    }
+    if(inliersResultTemp.size() > inliersResult.size())
+    {
+      inliersResult = inliersResultTemp;
+    }
+
+    // Randomly sample subset and fit line
+
+
+  // Measure distance between every point and fitted line
+  // If distance is smaller than threshold count it as inlier
+
+  }
+  // Return indicies of inliers from fitted line with most inliers
+
+  return inliersResult;
+
+}
+std::unordered_set<int> Ransac3D(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
 {
   std::unordered_set<int> inliersResult;
   srand(time(NULL));
